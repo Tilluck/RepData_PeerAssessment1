@@ -1,25 +1,73 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "RepData_PeerAssessment1"
+author: "Shawn"
+date: "1/6/2022"
+output: html_document
 ---
 
-
-## Loading and preprocessing the data
-
-
-
-## What is mean total number of steps taken per day?
-
-
-
-## What is the average daily activity pattern?
-
-
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Loading and preprocessing the data
+```{r}
+activity <- read.csv("repdata_data_activity/activity.csv")
+activity$date <-  as.Date(activity$date)
+```
+Histogram of the total number of steps taken each day
+```{r}
+stepsByDate <- aggregate(activity$steps, by = list(activity$date), FUN=sum, na.rm = TRUE)
+colnames(stepsByDate)<- c("date", "steps")
+hist(stepsByDate$steps, breaks = 30)
+```
+Mean and Median
+```{r}
+mSteps <- mean(stepsByDate$steps)
+mdSteps <- median(stepsByDate$steps)
+print(c("mean = ", mSteps , "median = ", mdSteps))
+```
+Average daily activity pattern
+```{r}
+intervalSteps <- aggregate(activity$steps, by = list(activity$interval), FUN=mean, na.rm = TRUE)
+colnames(intervalSteps)<- c("Interval", "Mean")
+plot(intervalSteps$Mean ~ intervalSteps$Interval,
+     type="l", xlab = "Interval", ylab = "Mean",
+     main = "Mean of steps by Interval")
+```
+Imputing missing values
+```{r}
+library(Hmisc)
+isna <- is.na(activity$steps)
+print(c( "Total NAs = ", table(isna)))
+cleanData <- activity
+cleanData$steps <- impute(activity$steps, fun=mean)
+```
+New histogram after missing values imputed
+```{r}
+stepsByDate2 <- aggregate(cleanData$steps, by = list(cleanData$date), FUN=sum, na.rm = TRUE)
+colnames(stepsByDate2)<- c("date", "steps")
+hist(stepsByDate2$steps, breaks = 30)
+```
+New Mean and Median
+```{r}
+mSteps2 <- mean(stepsByDate2$steps)
+mdSteps2 <- median(stepsByDate2$steps)
+print(c("mean = ", mSteps2 , "median = ", mdSteps2))
+```
+Weekdays vs Weekends
+```{r}
+library(dplyr)
+cleanData2 <- mutate(cleanData, weekday = weekdays(cleanData$date))
+cleanData2$dayType <- ifelse(cleanData2$weekday =="Saturday" | cleanData2$weekday =="Sunday", "Weekend", "Weekday" )
+cleanData2$dayType <- as.factor(cleanData2$dayType)
+```
+Weekdays vs Weekends plot
+```{r}
+library(ggplot2)
+cleanData3 <- aggregate(cleanData2$steps , by= list(cleanData2$dayType, cleanData2$interval),  FUN=mean)
+colnames(cleanData3) <- c("dayType", "interval", "steps")
+ggplot(cleanData3, aes(x=interval, y=steps, color=dayType))+ 
+  geom_line()+
+  facet_grid(dayType ~.)+ 
+  xlab("Intervals") + ylab("Mean")+
+  ggtitle("Average Steps per Interva, by Day Typel")
+```
